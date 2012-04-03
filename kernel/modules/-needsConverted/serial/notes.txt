@@ -1,0 +1,3 @@
+This used a external clock because os.clock() and os.time() did not yet exist. 
+This is no longer nessesary and should be changed unless someone can think of a reason to include this behaviour
+I (riddler) have the origional specifcation document for this, can include if someone wants it.
