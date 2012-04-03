@@ -40,7 +40,10 @@ local function appendfile(file, str)
     end
 end
 
-function log:logString(proc, str)
+function log:logString(proc, str, ...)
+    for k,v  in pairs( { ... } ) do
+        str = str..tostring(v)
+    end
     str = tostring(math.floor(os.clock(), 1)).." ["..proc.."] "..str.."\n"
     appendfile(logall, str)
     appendfile(proc..".log", str)

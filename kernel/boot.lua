@@ -49,7 +49,7 @@ term.setCursorPos(1,1)
 term.setCursorBlink(true)
 
 --Print info
-print("Riddler's kernel - PC:"..os.getComputerID())
+print("Riddler's kernel - PC:"..os.getComputerID()..", "..os.getLabel())
 print("Copyright (C) 2012  Jordan (Riddler)")
 print("-------------------")
 
