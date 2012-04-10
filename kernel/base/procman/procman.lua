@@ -324,7 +324,7 @@ end
 
 --[[--------------------------------------------------
 Name: runSimple
-Called: By a porgram
+Called: By a program
 Job: Spawn a new process from a file -- simplify return status
 returns: ok
 --]]--------------------------------------------------
@@ -334,6 +334,28 @@ local function runSimple(path, name, env, ...)
         return false, tostring(stat).."::"..tostring(err)
     end
     return true, err
+end
+
+--[[--------------------------------------------------
+Name: resolve
+Called: By a program
+Job: check standard paths for the program
+returns: path or nil
+--]]--------------------------------------------------
+local function resolve(name)
+    local paths = {
+        "/usr/local/programs",
+        "/usr/programs/",
+        kernel.dir.."/usr/programs/"
+        }
+
+    for k, v in ipairs(paths) do
+        local fname = v..name
+        if fs.exists(fname) and not fs.isDir(fname) then
+            return fname
+        end
+    end
+    return nil
 end
 
 --[[--------------------------------------------------
@@ -434,5 +456,6 @@ return {
     ["getPID"] = getPID,
     ["runSimple"] = runSimple,
     ["terminate"] = terminate,
-    ["sendEvent"] = sendEvent
+    ["sendEvent"] = sendEvent,
+    ["resolve"] = resolve
 }

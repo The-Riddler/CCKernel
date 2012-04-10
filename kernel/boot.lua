@@ -70,7 +70,7 @@ local function kernelLoadFile(path, env)
     setfenv(code, env or getfenv(1))
     
     local ok, err
-    for retries=1, 3 do
+    for retries=1, 3 do --extremly rare but it does actually happen
         ok, err = pcall(code)
         
         if not ok then
@@ -238,10 +238,16 @@ end
 print("Done, took "..os.clock()-startTime.." seconds")
 
 print("Checking for init script")
-    local filename = "etc/init.lua"
-    if fs.exists(filename) and not fs.isDir(filename) then
-        print("Running startup script: "..filename)
-        kernelEnvironment["procman"]["init"]("/etc/init.lua", kernelEnvironment)
+    local filenames = {
+        "etc/init.lua",
+        KERNEL_ROOT_DIR.."etc/init.lua"
+    }
+    
+    for k, filename in ipairs(filenames) do
+        if fs.exists(filename) and not fs.isDir(filename) then
+            print("Running startup script: "..filename)
+            kernelEnvironment["procman"]["init"](filename, kernelEnvironment)
+        end
     end
 print("***Init process terminated, kernel unloading***")
 print("***Total runtime: "..math.ceil((os.clock()-startTime)).."***")

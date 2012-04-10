@@ -1,0 +1,8 @@
+print()
+print()
+print()
+print("Something not working?")
+print("Never be afraid to try something new. Remember, amateurs built the ark; professionals built the titanic.")
+print("If its any consolation though, I'm working!")
+print()
+print()
