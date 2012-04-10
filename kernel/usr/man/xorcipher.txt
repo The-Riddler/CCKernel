@@ -1,0 +1,45 @@
+Xorcipher is a encryption/decryption module.
+
+Functions:
+    xorcipher.create(decrypt, data, [key])
+        Arguments:
+            decrypt
+                -set to false to encrypt data, true to decrypt data.
+            data
+                -the data to be encrypted/decrypted.
+            key
+                -The key to decrypt the data. (only required if decrypting)
+        Return value:
+            Formats:
+                table [cipherobj]
+            Description:
+                1 - table [cipherobj]
+                    -table containing the nessesary data and an iterator
+
+    cipherobj.iterate(self, [num])
+        Arguments:
+            num
+                -set to the number of chars to be encrypted/decrypted this iteration
+                -defults to 10 if not supplied
+        Return value:
+            Formats:
+                bool, number
+                bool, string, string
+                bool, string
+            Description:
+                1 - bool 
+                    -true if decryption is finished and results have been returned otherwise false.
+                2 - string/number 
+                    -If first value was false, then a number will be returned, this is the percent completed.
+                    -If the first value was true, this will be a string containing the encrypted/unencrypted data depending on the mode
+                3 - string
+                    -The key to decrypt the data if it was encrypting
+
+Objects:
+    cipherobj:
+        key - the key to decrypt the data
+        data - the decrypted data
+        ciphertext - the encrypted data
+        pos - the position in the data
+        datalen - the length of the data
+        iterate - the iterator function
