@@ -12,6 +12,7 @@ if fs.exists(filename) and not fs.isDir(filename) then
             for prog in string.gmatch(programs, "[^\r\n]+") do
                 local path = procman.resolve(prog)
                 if path ~= nil then
+                    print("Running: "..path)
                     local stat, err = procman.runSimple(path)
                     if stat == false then
                         error("Error running program: "..path.." ["..err.."]")
@@ -24,4 +25,9 @@ if fs.exists(filename) and not fs.isDir(filename) then
     else
         error("Could not open file")
     end
+end
+
+print("Starting shell")
+if procman.runSimple(procman.resolve("shell.lua")) == false then
+    error("Error running sheel")
 end

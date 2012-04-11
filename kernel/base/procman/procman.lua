@@ -66,6 +66,17 @@ local procHandlers = {}
 --Run (so we can stop procman")
 local listenForEvents = false
 
+--errortostring
+local function errorToString(errcode)
+    for k, v in pairs(statuscodes) do
+        if v == errcode then
+            return k
+        end
+    end
+    return nil
+end
+
+
 --Setup any values that NEED to be initialized
 local function setupProcdata(procdata)
     procdata["suspended"] = false
@@ -138,6 +149,7 @@ local function removeProcdata(procdata)
         --Mark us as waiting        
         procdata["state"] = "Z"
         procdata["suspended"] = true
+        syslog:logString("procman", procdata["name"].." waiting for children")
         return false
     end
 end
@@ -346,7 +358,7 @@ local function resolve(name)
     local paths = {
         "/usr/local/programs",
         "/usr/programs/",
-        kernel.dir.."/usr/programs/"
+        kernel.dir.."usr/programs/"
         }
 
     for k, v in ipairs(paths) do
@@ -457,5 +469,6 @@ return {
     ["runSimple"] = runSimple,
     ["terminate"] = terminate,
     ["sendEvent"] = sendEvent,
-    ["resolve"] = resolve
+    ["resolve"] = resolve,
+    ["errorToString"] = errorToString
 }
