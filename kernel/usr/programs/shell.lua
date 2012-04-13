@@ -2,19 +2,27 @@ local targs = {...}
 local pid = table.remove(targs,1)
 
 local commandHistory = {}
-local CWD = "/"
 local run = true
 local errorinfo = {}
 
 local settings = {
     ["PS1"] = "\\w", --expanded
     ["PS2"] = ">", --not expanded
-    ["RepeatHistory"] = false
+    ["RepeatHistory"] = false,
+    ["aliases"] = {
+        ["ls"] = "ls.lua"
+    }
 }
 
 local expansions = {
-    ["\\W"] = function() return CWD end,
-    ["\\w"] = function() return string.sub(string.match(CWD, "/%w*/$") or "///", 2, -2) end, --three "/" to allow it to cut the end off, cheaper than an if statement and stuff
+    ["\\W"] = function() return  procman.getCWD() end,
+    ["\\w"] = function()
+        local str = string.match(procman.getCWD(), "/%w*$")
+        if string.len(str) > 1 then
+            str = string.sub(str, 2, -1) 
+        end
+        return str
+    end,
     ["\\i"] = function() return os.getComputerID() end,
     ["\\l"] = function() return os.getComputerLabel() or "n/a" end 
 }
@@ -38,25 +46,17 @@ local function formatDir(dir)
     return dir
 end
 
-local function changeDir(dir)
-    if fs.exists(dir) and fs.isDir(dir) then 
-        CWD = formatDir(dir)
-        return true
-    end
-    return false
-end
-
 local function checkInternalCommands(cmdList)
     if cmdList[1] == "exit" then 
         run = false 
         return true
     elseif cmdList[1] == "cd" then
         if cmdList[2] == "../" then
-            if changeDir(string.gsub(CWD, "%w+/$", "")) then return true end
+            if  procman.setCWD(string.gsub(procman.getCWD(), "/%w*$", "")) then return true end
         elseif string.sub(cmdList[2],1,1) == "/" then --abolute dir
-            if changeDir(cmdList[2]) then return true end
+            if  procman.setCWD(cmdList[2]) then return true end
         else
-            if changeDir(CWD..cmdList[2]) then return true end
+            if  procman.setCWD(procman.getCWD().."/"..cmdList[2]) then return true end
         end
         print("Directory not found: "..cmdList[2])
         return true
@@ -66,6 +66,9 @@ local function checkInternalCommands(cmdList)
             print("["..k.."] "..v)
         end
         print("*****End error dump*****")
+        return true
+    elseif cmdList[1] == "pwd" then
+        print(procman.getCWD())
         return true
     end
     return false
@@ -83,7 +86,7 @@ end
 
 local function checkExternalProgram(parts)
     --check current directory
-    local file = CWD..parts[1]
+    local file =  procman.getCWD().."/"..parts[1]
     if fs.exists(file) and not fs.isDir(file) then
         runProgram(file)
         return true
@@ -99,6 +102,16 @@ local function checkExternalProgram(parts)
     return false
 end
 
+local function checkAliases(parts)
+    for k, v in pairs(parts) do
+        local newcmd = settings["aliases"][v]
+        if newcmd ~= nil then
+            parts[k] = newcmd
+        end
+    end
+end
+    
+
 local function main()
     while run == true do
         writePS()
@@ -113,6 +126,8 @@ local function main()
         for word in string.gmatch(command, "[^ ]+") do
             table.insert(parts, word)
         end
+        
+        checkAliases(parts)
         
         if not checkInternalCommands(parts) then
             --check current directory

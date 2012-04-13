@@ -29,5 +29,5 @@ end
 
 print("Starting shell")
 if procman.runSimple(procman.resolve("shell.lua")) == false then
-    error("Error running sheel")
+    error("Error running shell")
 end

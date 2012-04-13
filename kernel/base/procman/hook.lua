@@ -28,7 +28,7 @@ local hook = {}
 
 local run = false
 --local hooks = {}
-local debugEnable = true
+local debugEnable = false
 --local terminateEnabled = true
 local hookHandles = {}
 

@@ -191,6 +191,7 @@ local function terminate(pid)
         end
     end
 end
+
 --[[--------------------------------------------------
 Name: getPID
 Called: By a porgram
@@ -202,11 +203,36 @@ local function getPID()
 end
 
 --[[--------------------------------------------------
+Name: getCWD
+Called: By a porgram
+Job: get its CWD
+returns: CWD
+--]]--------------------------------------------------
+local function getCWD()
+    return CURRENT["cwd"]
+end
+
+--[[--------------------------------------------------
+Name: setCWD
+Called: By a porgram
+Job: set its CWD
+returns: bool - success
+--]]--------------------------------------------------
+local function setCWD(dir) --Abolute plx
+    if fs.exists(dir) and fs.isDir(dir) then
+        CURRENT["cwd"] = dir
+        return true
+    end
+    return false
+end
+
+--[[--------------------------------------------------
 Name: Run
 Called: By a porgram
 Job: Spawn a new process from a file
 returns:statuscode, error(if applicable)
 --]]--------------------------------------------------
+--FIXME: This function can be split up into smaller functions to allow people other than me to read it easily.
 local function run(path, name, env, background, ...)
     syslog:logString("procman", "Spawning process from file: "..path)
 
@@ -231,6 +257,7 @@ local function run(path, name, env, background, ...)
     --If were a child process setup data to reflect as much. Also suspend parent if it wants us in foreground
     if CURRENT ~= nil then
         procdata["parent"] = CURRENT["pid"] --Assign us as X's child
+        procdata["cwd"] = CURRENT["cwd"] --Copy parents cwd
         if background == false then --suspend parent
             syslog:logString("procman", "Suspending parent process, child created in foreground")
             CURRENT["suspended"] = true
@@ -239,6 +266,7 @@ local function run(path, name, env, background, ...)
         end
     else
         procdata["parent"] = nil --Init process, has no parent *gasp*
+        procdata["cwd"] = "/"
     end
     
     --Set the file variable to the file code is in
@@ -417,7 +445,7 @@ local function init(path, env)
         error("Danger, Will Robinson!, Danger!")
     end
     
-    --Spawn init process, its fatal if this doesn't work
+    --Spawn init process, it's fatal if this doesn't work
     local stat, err = run(path, "init", env)
     if stat ~= statuscodes.STAT_OK and stat ~= statuscodes.STAT_OK_RET then
         error("Error: clould not spawn init process <"..stat..","..tostring(err)..">")
@@ -470,5 +498,7 @@ return {
     ["terminate"] = terminate,
     ["sendEvent"] = sendEvent,
     ["resolve"] = resolve,
-    ["errorToString"] = errorToString
+    ["errorToString"] = errorToString,
+    ["getCWD"] = getCWD,
+    ["setCWD"] = setCWD
 }
