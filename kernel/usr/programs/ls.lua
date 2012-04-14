@@ -1,5 +1,16 @@
+local targs = {...}
+local pid = table.remove(targs, 1)
 
 local cwd = procman.getCWD()
+
+if type(targs[1]) == "string" then
+    if string.find(targs[1], "/") then
+        cwd = targs[1]
+    else
+        cwd = procman.getCWD()..targs[1]
+    end
+end
+
 local names = fs.list(cwd)
 local maxlen = 20
 local bigestlen = 0

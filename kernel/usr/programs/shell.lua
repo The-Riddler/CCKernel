@@ -27,6 +27,29 @@ local expansions = {
     ["\\l"] = function() return os.getComputerLabel() or "n/a" end 
 }
 
+local internalCommands = {
+    ["exit"] = function() run = false end,
+    ["cd"] = function(cmdList)
+        if cmdList[2] == "../" then
+            if  procman.setCWD(string.gsub(procman.getCWD(), "/%w*$", "")) then return true end
+        elseif string.sub(cmdList[2],1,1) == "/" then --abolute dir
+            if  procman.setCWD(cmdList[2]) then return true end
+        else
+            if  procman.setCWD(procman.getCWD().."/"..cmdList[2]) then return true end
+        end
+        print("Directory not found: "..cmdList[2])
+    end,
+    ["dump"] = function()
+        print("*****Error dump*****")
+        for k, v in pairs(errorinfo) do
+            print("["..k.."] "..v)
+        end
+        print("*****End error dump*****")
+        return true
+    end,
+    ["pwd"] = function() print(procman.getCWD()) end
+}
+
 local function writePS()
     local PS1 = settings["PS1"]
     
@@ -47,35 +70,16 @@ local function formatDir(dir)
 end
 
 local function checkInternalCommands(cmdList)
-    if cmdList[1] == "exit" then 
-        run = false 
-        return true
-    elseif cmdList[1] == "cd" then
-        if cmdList[2] == "../" then
-            if  procman.setCWD(string.gsub(procman.getCWD(), "/%w*$", "")) then return true end
-        elseif string.sub(cmdList[2],1,1) == "/" then --abolute dir
-            if  procman.setCWD(cmdList[2]) then return true end
-        else
-            if  procman.setCWD(procman.getCWD().."/"..cmdList[2]) then return true end
-        end
-        print("Directory not found: "..cmdList[2])
-        return true
-    elseif cmdList[1] == "dump" then
-        print("*****Error dump*****")
-        for k, v in pairs(errorinfo) do
-            print("["..k.."] "..v)
-        end
-        print("*****End error dump*****")
-        return true
-    elseif cmdList[1] == "pwd" then
-        print(procman.getCWD())
+    local func = internalCommands[cmdList[1]]
+    if func ~= nil then
+        func(cmdList)
         return true
     end
     return false
 end
 
-local function runProgram(file, args)
-    local stat, err = procman.run(file, nil, nil, false, args)
+local function runProgram(file, ...)
+    local stat, err = procman.run(file, nil, nil, false, ...)
     if stat ~= procman.status.STAT_OK and stat ~= procman.status.STAT_OK_RET then
         errorinfo["statuscode"] = stat
         errorinfo["errorstring"] = procman.errorToString(stat) or "n/a"
@@ -86,16 +90,18 @@ end
 
 local function checkExternalProgram(parts)
     --check current directory
-    local file =  procman.getCWD().."/"..parts[1]
+    local program = table.remove(parts, 1)
+    
+    local file =  procman.getCWD().."/"..program
     if fs.exists(file) and not fs.isDir(file) then
-        runProgram(file)
+        runProgram(file, unpack(parts))
         return true
     end
     
     --check default folders
-    local file = procman.resolve(parts[1])
+    local file = procman.resolve(program)
     if file ~= nil then
-        runProgram(file)
+        runProgram(file, unpack(parts))
         return true
     end
     
