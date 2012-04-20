@@ -209,6 +209,9 @@ Job: get its CWD
 returns: CWD
 --]]--------------------------------------------------
 local function getCWD()
+    if CURRENT == nil then
+        return nil
+    end
     return CURRENT["cwd"]
 end
 
@@ -219,7 +222,7 @@ Job: set its CWD
 returns: bool - success
 --]]--------------------------------------------------
 local function setCWD(dir) --Abolute plx
-    if fs.exists(dir) and fs.isDir(dir) then
+    if type(dir) == "string" and dir ~= "" and fs.exists(dir) and fs.isDir(dir) then
         CURRENT["cwd"] = dir
         return true
     end
@@ -285,7 +288,7 @@ local function run(path, name, env, background, ...)
         CURRENT = procdata
         
         --Call the code
-        local ok, err = pcall(code, procdata["pid"], ...) 
+        local ok, err = pcall(code, ...) 
         
         if not ok then --Problem?
             syslog:logString("procman", "Error calling file: "..path.." error: "..tostring(err))

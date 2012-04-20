@@ -191,6 +191,7 @@ status("Setting kernel info")
     kernelEnvironment["kernel"] = {}
     kernelEnvironment["kernel"]["version"] = 2
     kernelEnvironment["kernel"]["dir"] = KERNEL_ROOT_DIR
+    kernelEnvironment["kernel"]["loaded"] = false
 statusDone()
 
 --[[
@@ -207,6 +208,14 @@ Load program management module
 status("Loading program management module")
     --syslog:logTable("kernel", "Kernel environment:", kernelEnvironment)
     kernelEnvironment["procman"] = kernelLoadFile(KERNEL_ROOT_DIR.."base/procman/procman.lua", kernelEnvironment)
+statusDone()
+
+--[[
+Load program management module
+]]--
+status("Loading new filesystem")
+    --syslog:logTable("kernel", "Kernel environment:", kernelEnvironment)
+    kernelEnvironment["kernel"]["fs"] = kernelLoadFile(KERNEL_ROOT_DIR.."base/filesystem/filesystem.lua", kernelEnvironment)
 statusDone()
 
 --[[
@@ -236,6 +245,7 @@ for k, v in pairs(modulesToLoad) do
 end
 
 print("Done, took "..os.clock()-startTime.." seconds")
+kernelEnvironment["kernel"]["loaded"] = true
 
 print("Checking for init script")
     local filenames = {

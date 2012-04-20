@@ -1,17 +1,24 @@
 local targs = {...}
-local pid = table.remove(targs, 1)
 
+local dirtolist = ""
 local cwd = procman.getCWD()
+--print("CWD: "..cwd)
 
 if type(targs[1]) == "string" then
-    if string.find(targs[1], "/") then
-        cwd = targs[1]
+    dirtolist = targs[1]
+else
+    dirtolist = cwd
+end
+
+local names, relative = kernel.fs.list(dirtolist)
+if names == nil then
+    if relative == kernel.fs.status.FNF then
+        error("Directory does not exist: "..dirtolist)
     else
-        cwd = procman.getCWD()..targs[1]
+        error("Unknown error")
     end
 end
 
-local names = fs.list(cwd)
 local maxlen = 20
 local bigestlen = 0
 
@@ -20,17 +27,17 @@ for k, v in pairs(names) do
 end
 
 for k, v in pairs(names) do
-    local fullpath = cwd.."/"..v
     local str = v
+    local path = dirtolist.."/"..v
     
     --padding
     str = str..string.rep(" ",3+bigestlen-string.len(v))
-
+    --print("DEBUG: "..fullpath)
     --Directory and size
-    if fs.isDir(fullpath) then
+    if kernel.fs.isDir(path) then
         str = "d "..str.."*"
     else
-        str = "f "..str..fs.getSize(fullpath)
+        str = "f "..str..kernel.fs.getSize(path)
     end
     
     print(str)

@@ -1,5 +1,4 @@
 local targs = {...}
-local pid = table.remove(targs,1)
 
 local commandHistory = {}
 local run = true
@@ -10,12 +9,14 @@ local settings = {
     ["PS2"] = ">", --not expanded
     ["RepeatHistory"] = false,
     ["aliases"] = {
-        ["ls"] = "ls.lua"
+        ["ls"] = "ls.lua",
+        ["mkdir"] = "mkdir.lua",
+        ["rm"] = "rm.lua"
     }
 }
 
 local expansions = {
-    ["\\W"] = function() return  procman.getCWD() end,
+    ["\\W"] = function() return procman.getCWD() end,
     ["\\w"] = function()
         local str = string.match(procman.getCWD(), "/%w*$")
         if string.len(str) > 1 then
@@ -31,11 +32,23 @@ local internalCommands = {
     ["exit"] = function() run = false end,
     ["cd"] = function(cmdList)
         if cmdList[2] == "../" then
-            if  procman.setCWD(string.gsub(procman.getCWD(), "/%w*$", "")) then return true end
-        elseif string.sub(cmdList[2],1,1) == "/" then --abolute dir
+            local newdir = string.gsub(procman.getCWD(), "/%w*$", "")
+            if newdir == "" then newdir = "/" end
+            
+            if  procman.setCWD(newdir) then return true end
+        elseif kernel.fs.isabs(cmdList[2]) then --abolute dir
             if  procman.setCWD(cmdList[2]) then return true end
         else
-            if  procman.setCWD(procman.getCWD().."/"..cmdList[2]) then return true end
+            local cwd = procman.getCWD()
+            local isroot = (cwd == "/")
+            local newdir = ""
+            
+            if isroot then 
+                newdir = cwd..cmdList[2]
+            else
+                newdir = cwd.."/"..cmdList[2]
+            end
+            if  procman.setCWD(newdir) then return true end
         end
         print("Directory not found: "..cmdList[2])
     end,
@@ -133,12 +146,14 @@ local function main()
             table.insert(parts, word)
         end
         
-        checkAliases(parts)
-        
-        if not checkInternalCommands(parts) then
-            --check current directory
-            if not checkExternalProgram(parts) then
-                print("Error, could not locate program")
+        if next(parts) ~= nil then
+            checkAliases(parts)
+            
+            if not checkInternalCommands(parts) then
+                --check current directory
+                if not checkExternalProgram(parts) then
+                    print("Error, could not locate program")
+                end
             end
         end
     end
