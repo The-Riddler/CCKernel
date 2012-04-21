@@ -16,11 +16,12 @@ local function stringcheck(dir)
     end
 end
 
-local function catcherr(func, arg)
-    if not fs.exists(arg) then
+local function catcherr(func, ...)
+    local targs = {...}
+    if not fs.exists(targs[1]) then
         return nil, newfs["statuscodes"]["FNF"]
     end
-    return func(arg)
+    return func(unpack(targs))
 end
 
 function newfs.isabs(dir)
@@ -44,8 +45,10 @@ local function wrap(func, catcherrors)
     else
         return function(arg)
             stringcheck(arg)
+            if type(arg) ~= "string" then return nil end
+            if not fs.exists(arg) then return nil end
             local dir, relative = newfs.getabs(arg)
-            return catcherr(func, dir), relative
+            return func(dir), relative
         end
     end
 end
@@ -54,8 +57,32 @@ end
 New functions
 --]]-----------------------------------------
 newfs.list = wrap(fs.list)
-newfs.getSize = wrap(fs.getSize)
+newfs.size = wrap(fs.getSize)
 newfs.isDir = wrap(fs.isDir)
+newfs.exists = wrap(fs.exists)
+
+newfs.basename = function(name) 
+    return string.match(procman.getCWD(), "/%w*$")
+end
+
+newfs.open = function(file, mode)
+    stringcheck(file)
+    
+    local dir, relative = newfs.getabs(file)
+    return fs.open(file, mode)
+end
+
+newfs.move = function(arg1, arg2)
+    stringcheck(arg1)
+    stringcheck(arg2)
+    
+    local dir1, relative1 = newfs.getabs(arg1)
+    local dir2, relative2 = newfs.getabs(arg2)
+    
+    local ok, err = catcherr(fs.move, dir1, dir2)
+    
+    return ((not fs.exists(dir1)) and fs.exists(dir2)), relative1, relative2
+end
 
 newfs.mkdir = function(arg)
     stringcheck(arg)
