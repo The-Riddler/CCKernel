@@ -1,6 +1,10 @@
 local targs = { ... }
 local filename = table.remove(targs, 1)
 
-modulemanager.load("trash")
+assert(modulemanager.require("trash"), "Error loading trash api")
 
-trash.trash(filename)
+if trash.trash(filename) then
+    print("Trashed: "..filename)
+else
+    print("Error trashing file: "..filename)
+end

@@ -32,6 +32,7 @@ function trashapi.trash(file)
     
     if not makeinfo(file, id) then error("Couldnt create info") end
     if not kernel.fs.move(file, filepath.."/"..id..".trash") then error("Couldn't move file") end
+    return true
 end
 
 _G["trash"] = trashapi
