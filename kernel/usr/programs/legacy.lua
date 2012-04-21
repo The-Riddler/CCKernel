@@ -1,5 +1,4 @@
 local targs = { ... }
-local pid = table.remove(targs, 1)
 local filename = table.remove(targs, 1)
 
 if filename == nil then 
