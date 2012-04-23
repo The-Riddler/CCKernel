@@ -50,7 +50,7 @@ end
 --CURRENT always points to the current process
 local CURRENT = nil
 
---Statuscodes, I hate functions that just return "nil", that's not helpfull
+--Statuscodes, I hate functions that just return "nil", that's not helpful
 local statuscodes = {}
 statuscodes.STAT_OK = 0
 statuscodes.STAT_404 = 1
