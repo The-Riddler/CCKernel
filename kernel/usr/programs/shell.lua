@@ -11,7 +11,8 @@ local settings = {
     ["aliases"] = {
         ["ls"] = "ls.lua",
         ["mkdir"] = "mkdir.lua",
-        ["rm"] = "rm.lua"
+        ["rm"] = "rm.lua",
+        ["trash"] = "trash.lua"
     }
 }
 

@@ -62,7 +62,11 @@ newfs.isDir = wrap(fs.isDir)
 newfs.exists = wrap(fs.exists)
 
 newfs.basename = function(name) 
-    return string.match(procman.getCWD(), "/%w*$")
+    local str = string.match(name, "/[.%w]*$")
+    if string.len(str) > 1 then
+        str = string.sub(str, 2, -1)
+    end
+    return str
 end
 
 newfs.open = function(file, mode)
