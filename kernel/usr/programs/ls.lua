@@ -37,7 +37,7 @@ for k, v in pairs(names) do
     if kernel.fs.isDir(path) then
         str = "d "..str.."*"
     else
-        str = "f "..str..kernel.fs.getSize(path)
+        str = "f "..str..kernel.fs.size(path)
     end
     
     print(str)
