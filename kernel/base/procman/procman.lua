@@ -47,6 +47,19 @@ else
     hook = hook()
 end
 
+--[[
+Load parse functions
+]]--
+syslog:logString("procman", "Loading return parse functions")
+local retvalParseFunctions = assert(loadfile(procmanDIR.."parsefunctions.lua"))
+if retvalParseFunctions == nil then
+    syslog:logString("procman", "Unable to load parse functions, terminating") 
+    error("Unable to load parse functions, terminating") 
+else
+    setfenv(retvalParseFunctions, getfenv(1)) --Run in our environment
+    retvalParseFunctions = retvalParseFunctions(hook)
+end
+
 --CURRENT always points to the current process
 local CURRENT = nil
 
@@ -230,6 +243,57 @@ local function setCWD(dir) --Abolute plx
 end
 
 --[[--------------------------------------------------
+Name: procdataInheritInfo
+Called: internally
+Job: Inherit information from parent if nessesary
+returns:
+--]]--------------------------------------------------
+local function procdataInheritInfo(procdata, background)
+    if CURRENT ~= nil then --If were a child process setup data to reflect as much. Also suspend parent if it wants us in foreground
+        procdata["parent"] = CURRENT["pid"] --Assign us as X's child
+        procdata["cwd"] = CURRENT["cwd"] --Copy parents cwd
+        if background == false then --suspend parent
+            syslog:logString("procman", "Suspending parent process, child created in foreground")
+            CURRENT["suspended"] = true
+            CURRENT["state"] = "WaitingForChild"
+            CURRENT["statemetadata"] = procdata["pid"]
+        end
+    else
+        procdata["parent"] = nil
+        procdata["cwd"] = "/"
+    end
+end
+
+--[[--------------------------------------------------
+Name: parseProgramReturn
+Called: internally
+Job: parse the return and do whatever is nessesary
+returns:
+--]]--------------------------------------------------
+local function parseProgramReturn(procdata, retval)
+    local rettype = type(retval)
+    if rettype == "nil" then --One shot
+        --If we can't remove the procdata suspend the parent if we need to
+        if removeProcdata(procdata) == false and background == false then
+            coroutine.yield()
+        end
+        return statuscodes.STAT_OK, procdata["pid"]
+    elseif rettype ~= "table" then --Not process info, pass it on
+        --If we can't remove the procdata suspend the parent if we need to
+        if removeProcdata(procdata) == false and background == false then
+            coroutine.yield()
+        end
+        return statusCodes.STAT_OK_RET, retval
+    else --Table, process it
+        for k, v in pairs(retvalParseFunctions) do --Run the parse functions
+            if retval[k] ~= nil then
+                v(procdata, retval[k])
+            end
+        end
+    end
+end
+
+--[[--------------------------------------------------
 Name: Run
 Called: By a porgram
 Job: Spawn a new process from a file
@@ -256,24 +320,8 @@ local function run(path, name, env, background, ...)
     
     --Fill in the data (PID is automatically assigned)
     procdata["name"] = name or tostring(procdata["pid"]) --Name if supplied or PID
-    
-    --If were a child process setup data to reflect as much. Also suspend parent if it wants us in foreground
-    if CURRENT ~= nil then
-        procdata["parent"] = CURRENT["pid"] --Assign us as X's child
-        procdata["cwd"] = CURRENT["cwd"] --Copy parents cwd
-        if background == false then --suspend parent
-            syslog:logString("procman", "Suspending parent process, child created in foreground")
-            CURRENT["suspended"] = true
-            CURRENT["state"] = "WaitingForChild"
-            CURRENT["statemetadata"] = procdata["pid"]
-        end
-    else
-        procdata["parent"] = nil --Init process, has no parent *gasp*
-        procdata["cwd"] = "/"
-    end
-    
-    --Set the file variable to the file code is in
-    procdata["file"] = path
+    procdata["file"] = path --Set the file variable to the file code is in
+    procdataInheritInfo(procdata, background)
 
     --Load the file
     local code, err = loadfile(path)
@@ -313,46 +361,7 @@ local function run(path, name, env, background, ...)
     end
     
     --Parse return, info about the process
-    local retType = type(retval)
-    
-    if retType == "nil" then --Just execute, its one-shot, so its done. Kill it.
-        --If we cant remove the procdata (it spawned a child) suspend parent also if it asked for as much
-        if removeProcdata(procdata) == false and background == false then
-            --child isnt dead and caller wanted it in foreground
-            coroutine.yield()
-        end
-        return statuscodes.STAT_OK, procdata["pid"]
-    elseif type(retval) ~= "table" then --Not process info, so pass it on
-        --If we cant remove the procdata (it spawned a child) suspend parent also if it asked for as much
-        if removeProcdata(procdata) == false and background == false then
-            --child isnt dead and caller wanted it in foreground
-            coroutine.yield()
-        end
-        return statuscodes.STAT_OK_RET, retval, procdata["pid"]
-    else --Table, process info
-        local celement = retval["hooks"] 
-        if type(celement) == "table" then --We have hooks to add (hook table exists)
-            for event, funcs in pairs(celement) do --For each event, add the function
-                if type(funcs) == "table" then --support for multiple functions over same event (declared in table)
-                    for _,func in pairs(funcs) do
-                        hook.add(procdata, event, func) --add it to the hooks list (stored in procdata)
-                    end
-                elseif type(funcs) == "function" then --for one function
-                    hook.add(procdata, event, funcs) --add it to the hooks list (stored in procdata)
-                end
-            end
-        end
-        
-        --If caller didn't give us a name to give the child, let the child choose a default instead of PID
-        if retval["name"] and procdata["name"] == tostring(procdata["pid"]) then
-            procdata["name"] = retval["name"]
-        end
-        
-        --If there is a main function, set it up
-        if type(retval["main"]) == "function" then
-            procdata["main"] = coroutine.create(retval["main"]) --Set main function
-        end
-    end
+    parseProgramReturn(procdata, retval)
 
     --Add the current process as a child of the parent (if there was one)
     if CURRENT ~= nil then addChild(CURRENT, procdata) end

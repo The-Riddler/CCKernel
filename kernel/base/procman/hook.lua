@@ -84,18 +84,18 @@ local function callHooks(hooklist, errorname,  ...)
     end
 end
 
-function hook.call(procData, event, ...)   
-   local hooktbl = procData["hooks"]
+function hook.call(procdata, event, ...)   
+   local hooktbl = procdata["hooks"]
    if hooktbl == nil then return end
    
-   syslog:logString("hook", "Calling hooks for '"..procData["name"].."' event '"..event.."'")
+   syslog:logString("hook", "Calling hooks for '"..procdata["name"].."' event '"..event.."'")
 
     if hooktbl[event] ~= nil then
-        callHooks(hooktbl[event], procData["name"], ...)
+        callHooks(hooktbl[event], procdata["name"], ...)
     end
     
     if hooktbl["catchAll"] ~= nil then
-        callHooks(hooktbl["catchAll"], procData["name"], event, ...)
+        callHooks(hooktbl["catchAll"], procdata["name"], event, ...)
     end
 end
 
