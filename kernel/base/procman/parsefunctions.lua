@@ -19,7 +19,7 @@ return {
         end
     end,
     ["name"] = function(procdata, name) --Let the program pick a name instead of PID if the parent did not
-        if procdata["pid"] == procdata["name"] then
+        if tostring(procdata["pid"]) == procdata["name"] then
             procdata["name"] = name
         end
     end,

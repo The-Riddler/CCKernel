@@ -72,6 +72,7 @@ statuscodes.STAT_LOAD = 3
 statuscodes.STAT_OK_RET = 4
 statuscodes.STAT_DATAERROR = 5
 statuscodes.STAT_ALLOCPID = 6
+statuscodes.STAT_OK_RUNNING = 7
 
 --PID -> procdata list
 local procHandlers = {}
@@ -162,7 +163,8 @@ local function removeProcdata(procdata)
         --Mark us as waiting        
         procdata["state"] = "Z"
         procdata["suspended"] = true
-        syslog:logString("procman", procdata["name"].." waiting for children")
+        local children = 
+        syslog:logString("procman", procdata["name"].." waiting for children: ")
         return false
     end
 end
@@ -180,7 +182,7 @@ returns:
 --]]--------------------------------------------------
 local function terminate(pid)
     if pid == nil then --kill ourself
-        syslog:logString("procman", "Process '"..CURRENT["name"].."' terminated itself")
+        syslog:logString("procman", "Process '["..CURRENT["pid"].."]"..CURRENT["name"].."' terminated itself")
         --Call terminate event
         hook.call(CURRENT, "terminate")
         
@@ -277,19 +279,20 @@ local function parseProgramReturn(procdata, retval)
         if removeProcdata(procdata) == false and background == false then
             coroutine.yield()
         end
-        return statuscodes.STAT_OK, procdata["pid"]
+        return statuscodes.STAT_OK
     elseif rettype ~= "table" then --Not process info, pass it on
         --If we can't remove the procdata suspend the parent if we need to
         if removeProcdata(procdata) == false and background == false then
             coroutine.yield()
         end
-        return statusCodes.STAT_OK_RET, retval
+        return statusCodes.STAT_OK_RET
     else --Table, process it
         for k, v in pairs(retvalParseFunctions) do --Run the parse functions
             if retval[k] ~= nil then
                 v(procdata, retval[k])
             end
         end
+        return statuscodes.STAT_OK_RUNNING
     end
 end
 
@@ -353,6 +356,9 @@ local function run(path, name, env, background, ...)
         
         --Keep current pointer up to date (set it back to the previous value)
         CURRENT = oldcurrent
+        
+        --Add the current process as a child of the parent (if there was one)
+        if CURRENT ~= nil then addChild(CURRENT, procdata) end
     else
         --Couldn't load the file? Rare, but it happens.
         syslog:logString("procman", "Error loading file: "..path.." error: "..err)
@@ -361,18 +367,36 @@ local function run(path, name, env, background, ...)
     end
     
     --Parse return, info about the process
-    parseProgramReturn(procdata, retval)
+    local status = parseProgramReturn(procdata, retval)
 
-    --Add the current process as a child of the parent (if there was one)
-    if CURRENT ~= nil then addChild(CURRENT, procdata) end
     
     syslog:logString("procman", "Spawned process pid: "..procdata["pid"].." name: "..procdata["name"])
     if background == false then
         --child isn't dead and caller wanted it in foreground
         syslog:logString("procman", "Parent["..CURRENT["pid"].."] resume event: "..coroutine.yield())
     end
-    return statuscodes.STAT_OK, procdata["pid"] --Were done, YAY!
+    
+    if status == statuscodes.STAT_OK then --just finished
+        return status, procdata["pid"]
+    elseif status == statuscodes.STAT_OK_RET then --It returned with a non-table return
+        return status, retval, procdata["pid"]
+    else
+        return statuscodes.STAT_OK_RUNNING, procdata["pid"] --Were done, YAY!
+    end
 end
+
+--[[--------------------------------------------------
+Name: isOk
+Called: By a program/internally
+Job: return if the statuscode is an "ok" one
+returns: ok
+--]]--------------------------------------------------
+local function isOk(stat)
+    return stat == statuscodes.STAT_OK or 
+    stat == statuscodes.STAT_OK_RET or
+    stat == statuscodes.STAT_OK_RUNNING
+end
+
 
 --[[--------------------------------------------------
 Name: runSimple
@@ -382,7 +406,7 @@ returns: ok
 --]]--------------------------------------------------
 local function runSimple(path, name, env, ...)
     local stat, err = run(path, name, env, ...)
-    if stat ~= statuscodes.STAT_OK and stat ~= statuscodes.STAT_OK_RET then
+    if not isOk(stat) then
         return false, tostring(stat).."::"..tostring(err)
     end
     return true, err
@@ -459,7 +483,7 @@ local function init(path, env)
     
     --Spawn init process, it's fatal if this doesn't work
     local stat, err = run(path, "init", env)
-    if stat ~= statuscodes.STAT_OK and stat ~= statuscodes.STAT_OK_RET then
+    if not isOk(stat) then
         error("Error: clould not spawn init process <"..stat..","..tostring(err)..">")
     end
     
@@ -512,5 +536,6 @@ return {
     ["resolve"] = resolve,
     ["errorToString"] = errorToString,
     ["getCWD"] = getCWD,
-    ["setCWD"] = setCWD
+    ["setCWD"] = setCWD,
+    ["isOk"] = isOk
 }

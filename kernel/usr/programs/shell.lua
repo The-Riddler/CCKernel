@@ -94,7 +94,7 @@ end
 
 local function runProgram(file, ...)
     local stat, err = procman.run(file, nil, nil, false, ...)
-    if stat ~= procman.status.STAT_OK and stat ~= procman.status.STAT_OK_RET then
+    if not procman.isOk(stat) then
         errorinfo["statuscode"] = stat
         errorinfo["errorstring"] = procman.errorToString(stat) or "n/a"
         errorinfo["info"] = err or ""
