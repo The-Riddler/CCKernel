@@ -73,6 +73,7 @@ statuscodes.STAT_OK_RET = 4
 statuscodes.STAT_DATAERROR = 5
 statuscodes.STAT_ALLOCPID = 6
 statuscodes.STAT_OK_RUNNING = 7
+statuscodes.STAT_RUNTIME_ERROR = 8
 
 --PID -> procdata list
 local procHandlers = {}
@@ -125,7 +126,7 @@ Job:
 -Clean up any parent "zombie" processes that can now be killed
 Returns: true if it was deleted, false if its been marked as "Z"
 -]]---------------------------------------------------
-local function removeProcdata(procdata)
+local function removeProcdata(procdata, resumestring)
     syslog:logString("procman", "Removing procdata for "..procdata["name"])
     
     if next(procdata["children"]) == nil then --if we have no children
@@ -153,7 +154,7 @@ local function removeProcdata(procdata)
                     parentproc["state"] = nil
                     parentproc["suspended"] = false
                     parentproc["statemetadata"] = nil
-                    sendEvent(parentproc["pid"], "wakeup sleepy")
+                    sendEvent(parentproc["pid"], resumestring or "ok")
                 end
             end
         end
@@ -373,7 +374,11 @@ local function run(path, name, env, background, ...)
     syslog:logString("procman", "Spawned process pid: "..procdata["pid"].." name: "..procdata["name"])
     if background == false then
         --child isn't dead and caller wanted it in foreground
-        syslog:logString("procman", "Parent["..CURRENT["pid"].."] resume event: "..coroutine.yield())
+        local resumeevent = coroutine.yield()
+        syslog:logString("procman", "Parent["..CURRENT["pid"].."] resume event: "..resumeevent)
+        if resumeevent ~= "ok" then
+            return statuscodes.STAT_RUNTIME_ERROR, resumeevent
+        end
     end
     
     if status == statuscodes.STAT_OK then --just finished
@@ -460,7 +465,7 @@ local function callProcess(procdata, event, eventinfo)
                 end
                 
                 --Kill program
-                removeProcdata(CURRENT)
+                removeProcdata(CURRENT, returns[2])
             end
         end
         
