@@ -257,6 +257,7 @@ print("Checking for init script")
         if fs.exists(filename) and not fs.isDir(filename) then
             print("Running startup script: "..filename)
             kernelEnvironment["procman"]["init"](filename, kernelEnvironment)
+            break
         end
     end
 print("***Init process terminated, kernel unloading***")
