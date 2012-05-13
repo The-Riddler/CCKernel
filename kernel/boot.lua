@@ -185,7 +185,7 @@ status("cloneing global environment")
 statusDone()
 
 --[[
-Set thekernel info
+Set the kernel info
 ]]--
 status("Setting kernel info")
     kernelEnvironment["kernel"] = {}
@@ -211,7 +211,7 @@ status("Loading program management module")
 statusDone()
 
 --[[
-Load program management module
+Load filesystem module
 ]]--
 status("Loading new filesystem")
     --syslog:logTable("kernel", "Kernel environment:", kernelEnvironment)
