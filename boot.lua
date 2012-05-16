@@ -37,21 +37,21 @@ local params = {
     end,
     ["modman"] = function(arg)
         loadModuleManager = arg == "true"
+    end,
+    ["root"] = function(arg)
+        if string.sub(arg, 1, 1) ~= "/" then
+            error("Invalid root directory, must be absolute")
+        elseif arg == "" then
+            error("No root directory specified, but argument was given")
+        end
+        
+        if string.sub(arg, -1, -1) ~= "/" then
+            arg = arg.."/"
+        end
+        
+        KERNEL_ROOT_DIR = arg
     end
 }
-
---Record start time
-local startTime = os.clock()
-
---Setup the screen
-term.clear()
-term.setCursorPos(1,1)
-term.setCursorBlink(true)
-
---Print info
-print("Riddler's kernel - PC:"..os.getComputerID()..", "..(os.getComputerLabel() or ""))
-print("Copyright (C) 2012  Jordan (Riddler)")
-print("-------------------")
 
 --[[
 Create custom run function
@@ -88,12 +88,53 @@ local function kernelLoadFile(path, env)
     return err
 end
 
+--Record start time
+local startTime = os.clock()
+
+--Setup the screen
+term.clear()
+term.setCursorPos(1,1)
+term.setCursorBlink(true)
+
+--Print info
+print("Riddler's kernel - PC:"..os.getComputerID()..", "..(os.getComputerLabel() or ""))
+print("Copyright (C) 2012  Jordan (Riddler)")
+print("-------------------")
+
+
+--[[
+Parse startup parameters (overides config files where nessesary)
+]]--
+local args = table.concat({ ... }, " ")
+if args ~= nil and args ~= "" then
+    print("Processing boot arguments")
+    local trimpattern = "^%s*(.-)%s*$"
+    local argpattern = "[^-]+"
+    local namepattern = "[^%s]+"
+    local valuepattern = "[^%s]+$"
+    
+    for argstr in string.gmatch(args, argpattern) do
+        argstr = string.match(argstr, trimpattern)
+        print("    "..argstr)
+        local argname = string.match(argstr, namepattern)
+        local argval = string.match(argstr, valuepattern)
+        
+        local paramfunc = params[argname]
+        if paramfunc == nil then
+            error("Invalid parameter: "..argname)
+        else
+            paramfunc(argval)
+        end
+    end
+end
 
 --[[
 Start loading stuff!
 ]]--
 print("Loading syslog")
 local syslog = kernelLoadFile(KERNEL_ROOT_DIR.."base/syslog/syslog.lua")
+--Just for the log note our root dir
+syslog:logString("kernel", "KERNEL_ROOT_DIR = "..KERNEL_ROOT_DIR)
 
 --[[
 Setup status display to show what were doing
@@ -104,7 +145,7 @@ local function status(str)
     local len = string.len(str)
     local targetlen = width-6
     
-    syslog:logString("boot", str)
+    syslog:logString("kernel", str)
     
     if len > targetlen then
         str = string.sub(str, 0, width-7)
@@ -145,29 +186,6 @@ status("Checking config files")
         end
     end
 statusDone()
-
-
---[[
-Parse startup parameters (overides config files where nessesary)
-]]--
-local arg = { ... }
-if arg ~= nil then
-    status("Processing boot arguments")
-        local i = 1
-        local curarg = arg[i]
-        
-        while curarg ~= nil do
-            local paramfunc = params[curarg]
-            if paramfunc == nil then
-                error("Invalid parameter: "..curarg)
-            else
-                paramfunc(arg[i+1])
-            end
-            i = i + 2
-            curarg = arg[i]
-        end
-    statusDone()
-end
 
 --[[
 Load table module, we will need the functions in a second
