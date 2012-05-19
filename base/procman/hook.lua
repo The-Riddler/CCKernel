@@ -75,6 +75,7 @@ local function callHooks(hooklist, errorname,  ...)
             if v ~= nil then
                 syslog:debugString(debugEnable, "hook", "--calling: "..k)
                 local ok, err = pcall(v, ...)
+                err = err or "n/a"
                 if ok == false and string.find(err, "PROCMANTERM") == nil then --Ignore it throwing an error to terminate
                     print("Error calling hook '"..k.."' for '"..errorname.."' "..err)
                     syslog:logString("hook", "Error calling hook '"..k.."' for '"..errorname.."' "..err)

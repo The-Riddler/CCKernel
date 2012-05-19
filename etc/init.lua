@@ -29,15 +29,24 @@ if fs.exists(filename) and not fs.isDir(filename) then
         if programs ~= nil then
             print("Starting programs from file: "..filename)
             for prog in string.gmatch(programs, "[^\r\n]+") do
-                local path = procman.resolve(prog)
+                local path = procman.resolve(string.match(prog, "[^%s]+"))
                 if path ~= nil then
                     print("Running: "..path)
-                    local stat, err = procman.runSimple(path)
+                    local args = nil
+                    for match in string.gmatch(prog, "[^%s]+") do
+                        if args == nil then
+                            args = {}
+                        else
+                            table.insert(args, match)
+                        end
+                    end
+                    print("args: "..table.concat(args, "::"))
+                    local stat, err = procman.runSimple(path, nil, nil, true, unpack(args))
                     if stat == false then
                         error("Error running program: "..path.." ["..err.."]")
                     end
                 else
-                    error("Error locating program: "..prog)
+                    error("Error locating program: "..path)
                 end
             end
         end

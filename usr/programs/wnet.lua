@@ -58,18 +58,21 @@ local function getPacketID()
 end
 
 local function cleanUpPacketList()
+    local newseen = {}
     for k, v in pairs(hasSeen) do
-        if v >= os.clock() then
-            hasSeen[k] = nil
-            syslog:logString("wnet", "Removing handled packet ["..v.."] from list")
+        if v >= os.clock()+60 then
+            syslog:logString("wnet", "Removing handled packet ["..k.."] from list")
+        else
+            newseen[k] = v
         end
     end
+    hasSeen = newseen
 end
 
 local function checkHandledPacketID(id)
     local timeend = hasSeen[id]
-    if timeend == nil or timeend >= os.clock() then 
-        hasSeen[id] = os.clock()+60
+    if timeend == nil then 
+        hasSeen[id] = os.clock()
         return false
     else
         return true
@@ -123,7 +126,9 @@ local function sendPacket(packet)
     
     packet = wnet.header..textutils.serialize(packet) --TODO: create my own
 
-    if dest == -1 then
+    if dest == os.getComputerID() then --to ourself
+        wnet.callback(os.getComputerID(), packet)
+    elseif dest == -1 then
         wnet.modem.broadcast(packet)
         syslog:logString("wnet", "Broadcasting packet")
     else
@@ -213,7 +218,7 @@ local function handleNWMPacket(packet)
         --Update hop count
         data[3] = data[3] + 1
         --Forward
-        packet[5] = textutils.serialize(data)
+        packet[6] = textutils.serialize(data)
         forwardPacket(packet)
     elseif data[1] == 1 then --echo
         wnet.sendNWMPacket(2, packet[1], data[2]) --give it origional echo data so it can respond properly
@@ -243,7 +248,7 @@ local function handleWNetPacket(packet)
             local callbackpid= callbacks[port]
             if callbackpid ~= nil then
                 syslog:logString("wnet", "Packet receaved directed at this PC, passing to program: "..callbackpid)
-                procman.sendEvent(callbackpid, "wnet-data", port, packet[5])
+                procman.sendEvent(callbackpid, "wnet-data", packet[1], port, packet[5])
             else
                 syslog:logString("wnet", "Error, no callback or incorrect type")
             end
@@ -308,7 +313,7 @@ Jobs:
 function wnet.callback(sender, message)
     if message == nil then error("Message is nil") end
     
-    syslog:logString("wnet", "Validating packet"..message)
+    syslog:logString("wnet", "Validating packet: "..message)
     message = validatePacket(message)
     if message == nil then 
         syslog:logString("wnet", "Invalid packet")
@@ -348,7 +353,6 @@ end
 return {
     ["name"] = "wnet",
     ["hooks"] = {
-        --["think"] = wnet.checkPackets,
         ["rednet_message"] = wnet.callback,
         ["terminate"] = cleanup,
         ["think"] = cleanUpPacketList

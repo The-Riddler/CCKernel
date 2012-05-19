@@ -409,8 +409,8 @@ Called: By a program
 Job: Spawn a new process from a file -- simplify return status
 returns: ok
 --]]--------------------------------------------------
-local function runSimple(path, name, env, ...)
-    local stat, err = run(path, name, env, ...)
+local function runSimple(path, name, env, background,  ...)
+    local stat, err = run(path, name, env, background, ...)
     if not isOk(stat) then
         return false, tostring(stat).."::"..tostring(err)
     end
