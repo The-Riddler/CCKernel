@@ -286,7 +286,7 @@ local function parseProgramReturn(procdata, retval)
         if removeProcdata(procdata) == false and background == false then
             coroutine.yield()
         end
-        return statusCodes.STAT_OK_RET
+        return statuscodes.STAT_OK_RET
     else --Table, process it
         for k, v in pairs(retvalParseFunctions) do --Run the parse functions
             if retval[k] ~= nil then
@@ -500,6 +500,7 @@ local function init(path, env)
     local thinkHandle = os.startTimer(1) --Think event triggered every second
     repeat
         local eventinfo = { coroutine.yield() }
+        syslog:debugString(kernel.debug, "procman", "Event: ", unpack(eventinfo))
         local event = table.remove(eventinfo, 1)
         local arg = eventinfo[1]
         

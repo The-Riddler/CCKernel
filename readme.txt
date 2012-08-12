@@ -1,0 +1,1 @@
+All works contained in this project are under the GPLv3 unless othwerwise stated.

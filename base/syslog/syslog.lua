@@ -49,9 +49,9 @@ function log:logString(proc, str, ...)
     appendfile(proc..".log", str)
 end
 
-function log:debugString(dbg, proc, str)
+function log:debugString(dbg, proc, ...)
     if dbg == true then
-        self:logString(proc, str)
+        self:logString(proc, ...)
     end
 end
 

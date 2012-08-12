@@ -28,7 +28,6 @@ local hook = {}
 
 local run = false
 --local hooks = {}
-local debugEnable = false
 --local terminateEnabled = true
 local hookHandles = {}
 
@@ -56,7 +55,7 @@ function hook.add(procData, event, func)
     
     --local handler = getNextFreeHandle()
     
-    syslog:debugString(debugEnable, "hook", "Adding hook to process '"..procData["name"].."' event '"..event.."'")
+    syslog:debugString(kernel.debug, "hook", "Adding hook to process '"..procData["name"].."' event '"..event.."'")
     
     if hooktbl[event] == nil then hooktbl[event] = {} end
     table.insert(hooktbl[event], func)
@@ -73,7 +72,7 @@ local function callHooks(hooklist, errorname,  ...)
     if hooklist ~= nil then
         for k, v in pairs(hooklist) do
             if v ~= nil then
-                syslog:debugString(debugEnable, "hook", "--calling: "..k)
+                syslog:debugString(kernel.debug, "hook", "--calling: "..k)
                 local ok, err = pcall(v, ...)
                 err = err or "n/a"
                 if ok == false and string.find(err, "PROCMANTERM") == nil then --Ignore it throwing an error to terminate
@@ -89,7 +88,8 @@ function hook.call(procdata, event, ...)
    local hooktbl = procdata["hooks"]
    if hooktbl == nil then return end
    
-   syslog:logString("hook", "Calling hooks for '"..procdata["name"].."' event '"..event.."'")
+   syslog:logString("hook", "running")
+   syslog:debugString(kernel.debug, "hook", "Calling hooks for '"..procdata["name"].."' event '"..event.."'")
 
     if hooktbl[event] ~= nil then
         callHooks(hooktbl[event], procdata["name"], ...)
@@ -119,19 +119,5 @@ function hook:stop()
     run = false
 end
 ]]--
-
-function hook:debugEnable(enable)
-    if enable then
-        debugEnable = true
-        --[[self:addGlobal("redstone", "hookForceClose", function()
-            if redstone.getInput("left") == true then
-                hook:stop()
-            end
-        end)]]--
-    else
-        debugEnable = false
-        --self:removeGlobal("redstone", "hookForceClose")
-    end
-end
 --print("hookenv: "..tostring(_G))
 return hook

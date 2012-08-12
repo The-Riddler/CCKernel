@@ -22,6 +22,7 @@ local KERNEL_ROOT_DIR = "/rom/riddler/kernel/"
 --Setup params, syntax: parameter value
 local modulesToLoad = {}
 local loadModuleManager = true
+local kernelDebug = false
 
 local params = {
     ["modules"] = function(arg) 
@@ -50,6 +51,9 @@ local params = {
         end
         
         KERNEL_ROOT_DIR = arg
+    end,
+    ["debug"] = function(arg)
+        kernelDebug = arg == "true"
     end
 }
 
@@ -210,6 +214,7 @@ status("Setting kernel info")
     kernelEnvironment["kernel"]["version"] = 2
     kernelEnvironment["kernel"]["dir"] = KERNEL_ROOT_DIR
     kernelEnvironment["kernel"]["loaded"] = false
+    kernelEnvironment["kernel"]["debug"] = kernelDebug
 statusDone()
 
 --[[

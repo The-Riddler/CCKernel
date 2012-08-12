@@ -92,4 +92,13 @@ function tbl.join(tbl, ...)
     return tbl --Syntactical prittyness only
 end
 
+function tbl.find(tbl, entry)
+    for k, v in pairs(tbl) do
+        if v == entry then
+            return k
+        end
+    end
+    return nil
+end
+
 return tbl
